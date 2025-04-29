@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <title>🧩Upa's Playground</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background puzzle pieces -->
+    <div class="puzzle-bg-pieces">
+        <div class="puzzle-piece-shape"></div>
+        <div class="puzzle-piece-shape"></div>
+        <div class="puzzle-piece-shape"></div>
+        <div class="puzzle-piece-shape"></div>
+        <div class="puzzle-piece-shape"></div>
+        <div class="puzzle-piece-shape"></div>
+    </div>
+
+    <!-- Tombol kontrol musik -->
+    <div class="music-control">
+        <button id="music-toggle">🔊</button>
+    </div>
+
+    <div class="container" id="main-menu">
+        <h1>🧩Upa's Playground</h1>
+        <p class="subtitle">Pilih gambar puzzle yang ingin kamu mainkan!</p>
+        
+        <div class="puzzle-grid">
+            <!-- Puzzle thumbnails akan diisi oleh JavaScript -->
+        </div>
+    </div>
+
+    <div class="container hidden" id="game-screen">
+        <div class="header">
+            <button id="back-button">← Kembali</button>
+            <h1>🧩Upa's Playground</h1>
+        </div>
+        
+        <div class="controls">
+            <div class="difficulty-selector">
+                <label for="difficulty">Tingkat Kesulitan:</label>
+                <select id="difficulty">
+                    <option value="2">Mudah (2x2)</option>
+                    <option value="3">Sedang (3x3)</option>
+                </select>
+            </div>
+            <button id="shuffle-button">🔀 Acak Ulang</button>
+        </div>
+        
+        <div class="instructions">
+            <p>✨ Cara Bermain: Tarik kepingan puzzle dari kotak kiri lalu letakkan pada posisi yang tepat di kotak kanan! ✨</p>
+        </div>
+
+        <div class="puzzle-container">
+            <div class="puzzle-panel">
+                <div class="puzzle-board" id="puzzle-board"></div>
+            </div>
+            <div class="reference-panel">
+                <div class="reference-image-container">
+                    <img src="" alt="Gambar Referensi" id="reference-image">
+                </div>
+            </div>
+        </div>
+
+        <div id="success-message" class="hidden">
+            <h2>Yeay! Puzzle selesai 🎉</h2>
+            <button id="play-again">Main Lagi</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
