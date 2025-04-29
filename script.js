@@ -113,15 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Data gambar puzzle
     const puzzleImages = [
-        { id: 1, src: 'public/images/puzzle1.jpg', name: 'Puzzle 1' },
-        { id: 2, src: 'public/images/puzzle2.jpg', name: 'Puzzle 2' },
-        { id: 3, src: 'public/images/puzzle3.jpg', name: 'Puzzle 3' },
-        { id: 4, src: 'public/images/puzzle4.jpg', name: 'Puzzle 4' },
-        { id: 5, src: 'public/images/puzzle5.jpg', name: 'Puzzle 5' },
-        { id: 6, src: 'public/images/puzzle6.jpg', name: 'Puzzle 6' },
-        { id: 7, src: 'public/images/puzzle7.jpg', name: 'Puzzle 7' },
-        { id: 8, src: 'public/images/puzzle8.jpg', name: 'Puzzle 8' },
-        { id: 9, src: 'public/images/puzzle9.jpg', name: 'Puzzle 9' }
+        { id: 1, src: 'images/puzzle1.jpg', name: 'Puzzle 1' },
+        { id: 2, src: 'images/puzzle2.jpg', name: 'Puzzle 2' },
+        { id: 3, src: 'images/puzzle3.jpg', name: 'Puzzle 3' },
+        { id: 4, src: 'images/puzzle4.jpg', name: 'Puzzle 4' },
+        { id: 5, src: 'images/puzzle5.jpg', name: 'Puzzle 5' },
+        { id: 6, src: 'images/puzzle6.jpg', name: 'Puzzle 6' },
+        { id: 7, src: 'images/puzzle7.jpg', name: 'Puzzle 7' },
+        { id: 8, src: 'images/puzzle8.jpg', name: 'Puzzle 8' },
+        { id: 9, src: 'images/puzzle9.jpg', name: 'Puzzle 9' }
     ];
     
     // Fungsi untuk membuat menu utama
