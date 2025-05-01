@@ -1,54 +1,18 @@
 // Logika untuk game Jigsaw Puzzle
 document.addEventListener('DOMContentLoaded', () => {
     // Deteksi perangkat dan browser untuk pengaturan performa
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+    const isMobile = false; // Nonaktifkan mode mobile/responsive
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
     
     // Setel preferensi performa
-    const useCssTransform = isMobile; // Gunakan transform untuk perangkat mobile
-    const lowerQualityOnMobile = isMobile; // Kurangi kualitas visual pada perangkat mobile
+    const useCssTransform = false; // Gunakan metode standar untuk semua perangkat
+    const lowerQualityOnMobile = false; // Gunakan kualitas tinggi untuk semua perangkat
     
-    // Mencegah momentum scroll dan perilaku lain yang mengganggu
-    if (isMobile) {
-        // Hanya mencegah scroll pada elemen puzzle, bukan seluruh halaman
-        puzzleBoard.addEventListener('touchmove', function(e) {
-            if (draggedPiece) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        referenceContainer.addEventListener('touchmove', function(e) {
-            if (draggedPiece) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        // Mencegah highlight pada tap tanpa mencegah klik
-        document.addEventListener('touchstart', function(e) {
-            const target = e.target;
-            if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        // Nonaktifkan double-tap zoom pada iOS hanya pada elemen puzzle
-        if (isIOS) {
-            puzzleBoard.addEventListener('touchend', function(e) {
-                const target = e.target;
-                if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            referenceContainer.addEventListener('touchend', function(e) {
-                const target = e.target;
-                if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-        }
-    }
+    // Konstanta untuk ukuran puzzle dan toleransi magnet
+    const PUZZLE_BOARD_SIZE = 400; // Tetapkan ukuran desktop untuk semua perangkat
+    const MAGNET_THRESHOLD = 40; // Jarak dalam piksel untuk efek magnet
+    const TOLERANCE = 20; // Toleransi untuk penempatan yang benar
     
     // Elemen-elemen DOM
     const gameScreen = document.getElementById('game-screen');
@@ -125,19 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Mainkan musik pertama saat halaman dimuat
     playNextMusic();
-    
-    // Konstanta baru untuk ukuran puzzle dan toleransi magnet
-    const PUZZLE_BOARD_SIZE = isMobile ? 300 : 400;
-    const MAGNET_THRESHOLD = 40; // Jarak dalam piksel untuk efek magnet
-    const TOLERANCE = 20; // Toleransi untuk penempatan yang benar
-    
-    // Sesuaikan ukuran board berdasarkan perangkat
-    if (isMobile) {
-        puzzleBoard.style.width = `${PUZZLE_BOARD_SIZE}px`;
-        puzzleBoard.style.height = `${PUZZLE_BOARD_SIZE}px`;
-        referenceContainer.style.width = `${PUZZLE_BOARD_SIZE}px`;
-        referenceContainer.style.height = `${PUZZLE_BOARD_SIZE}px`;
-    }
     
     // Variabel untuk menyimpan state permainan
     let gridSize = parseInt(difficultySelect.value);
@@ -594,11 +545,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fungsi untuk preload semua gambar puzzle
     function preloadAllImages() {
-        console.log("Memulai preload semua gambar...");
+        console.log("Memulai preload semua gambar... (Mode Desktop untuk semua perangkat)");
         
-        // Untuk iPad dan iOS, force reload dulu
+        // Untuk iPad dan iOS, gunakan pendekatan yang lebih sederhana
         if (isIOS) {
-            console.log("Terdeteksi perangkat iOS, menerapkan teknik khusus loading gambar");
+            console.log("Terdeteksi perangkat iOS, menggunakan mode desktop");
         }
         
         // Tambahkan parameter cache-busting untuk mencegah caching
