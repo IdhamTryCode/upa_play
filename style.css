@@ -657,8 +657,8 @@ button {
     }
     
     .puzzle-piece.dragging {
-        opacity: 0.7; /* Lebih transparan agar jari bisa melihat posisi */
-        transform: scale(1.05) !important; /* Sedikit lebih besar agar lebih terlihat */
+        opacity: 0.8; /* Sedikit transparan agar jari bisa melihat posisi */
+        transform: none !important; /* Tanpa transformasi untuk menghindari loncatan */
         z-index: 2000 !important;
     }
 } 

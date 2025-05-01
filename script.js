@@ -320,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Simpan offset untuk posisi mouse relatif terhadap potongan puzzle
         const rect = element.getBoundingClientRect();
+        
         if (e.type === 'mousedown') {
             // Mouse events
             draggedPiece.offsetX = e.clientX - rect.left;
@@ -328,16 +329,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Touch events - perbaikan untuk perangkat tablet/mobile
             const touch = e.touches[0];
             
-            // Untuk touch events, gunakan offset yang lebih kecil agar kepingan lebih dekat ke jari
-            // Ini membantu agar posisi kepingan lebih sesuai dengan jari pengguna
-            const touchOffsetFactor = 0.5; // Faktor pengali untuk offset touch event
-            
-            draggedPiece.offsetX = (touch.clientX - rect.left) * touchOffsetFactor;
-            draggedPiece.offsetY = (touch.clientY - rect.top) * touchOffsetFactor;
+            // Untuk touch events pada tablet, gunakan posisi sentuhan langsung
+            draggedPiece.offsetX = touch.clientX - rect.left;
+            draggedPiece.offsetY = touch.clientY - rect.top;
         }
         
         // Simpan parent container awal (puzzleBoard atau referenceContainer)
         draggedPiece.startContainer = element.parentNode;
+        
+        // Simpan posisi awal
+        draggedPiece.startLeft = parseInt(element.style.left) || 0;
+        draggedPiece.startTop = parseInt(element.style.top) || 0;
     }
     
     // Fungsi untuk melakukan drag
@@ -356,18 +358,31 @@ document.addEventListener('DOMContentLoaded', () => {
             clientY = touch.clientY;
         }
         
+        // Jika elemen belum dipindahkan ke body, pindahkan sekarang dengan posisi yang sama
+        if (draggedPiece.element.parentNode !== document.body) {
+            // Simpan posisi dan dimensi saat ini
+            const rect = draggedPiece.element.getBoundingClientRect();
+            
+            // Pindahkan ke body
+            document.body.appendChild(draggedPiece.element);
+            
+            // Setel posisi absolut yang sama relatif terhadap viewport
+            draggedPiece.element.style.transition = 'none';
+            draggedPiece.element.style.position = 'absolute';
+            draggedPiece.element.style.left = `${rect.left}px`;
+            draggedPiece.element.style.top = `${rect.top}px`;
+            
+            // Beri waktu browser untuk merender
+            void draggedPiece.element.offsetWidth;
+        }
+        
         // Update posisi langsung tanpa transisi
         draggedPiece.element.style.transition = 'none';
         draggedPiece.element.style.position = 'absolute';
         
-        // Gunakan posisi jari/mouse langsung untuk tablet
+        // Gunakan posisi jari/mouse langsung 
         draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX}px`;
         draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY}px`;
-        
-        // Pastikan element masih di dalam document.body
-        if (draggedPiece.element.parentNode !== document.body) {
-            document.body.appendChild(draggedPiece.element);
-        }
     }
     
     // Fungsi untuk mengakhiri drag
