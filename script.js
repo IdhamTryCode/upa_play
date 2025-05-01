@@ -519,6 +519,11 @@ document.addEventListener('DOMContentLoaded', () => {
         shufflePieces();
     });
     
+    // Event listener untuk tombol "Ganti Gambar"
+    document.getElementById('change-image-button').addEventListener('click', () => {
+        startRandomPuzzle();
+    });
+    
     // Event listener untuk tombol "Main Lagi"
     playAgainButton.addEventListener('click', () => {
         successModal.classList.add('hidden');
