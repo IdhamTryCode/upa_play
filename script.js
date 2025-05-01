@@ -11,18 +11,43 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Mencegah momentum scroll dan perilaku lain yang mengganggu
     if (isMobile) {
-        document.body.addEventListener('touchmove', function(e) {
+        // Hanya mencegah scroll pada elemen puzzle, bukan seluruh halaman
+        puzzleBoard.addEventListener('touchmove', function(e) {
             if (draggedPiece) {
                 e.preventDefault();
             }
         }, { passive: false });
         
-        // Nonaktifkan double-tap zoom pada iOS
-        document.addEventListener('touchend', function(e) {
-            if (e.touches.length === 0) {
+        referenceContainer.addEventListener('touchmove', function(e) {
+            if (draggedPiece) {
                 e.preventDefault();
             }
         }, { passive: false });
+        
+        // Mencegah highlight pada tap tanpa mencegah klik
+        document.addEventListener('touchstart', function(e) {
+            const target = e.target;
+            if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Nonaktifkan double-tap zoom pada iOS hanya pada elemen puzzle
+        if (isIOS) {
+            puzzleBoard.addEventListener('touchend', function(e) {
+                const target = e.target;
+                if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            referenceContainer.addEventListener('touchend', function(e) {
+                const target = e.target;
+                if (target.closest('.puzzle-piece') || target.classList.contains('puzzle-piece')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
     }
     
     // Elemen-elemen DOM
