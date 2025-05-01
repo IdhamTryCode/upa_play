@@ -76,8 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mainkan musik pertama saat halaman dimuat
     playNextMusic();
     
-    // Deteksi apakah perangkat mobile
-    const isMobile = window.innerWidth <= 600;
+    // Deteksi perangkat mobile berdasarkan user agent
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     // Konstanta untuk ukuran puzzle
     const PUZZLE_BOARD_SIZE = isMobile ? 300 : 400;
@@ -318,71 +318,72 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simpan referensi
         draggedPiece = pieces.find(piece => piece.element === element);
         
-        // Simpan offset untuk posisi mouse relatif terhadap potongan puzzle
+        // Simpan original position sebelum drag
         const rect = element.getBoundingClientRect();
         
+        // Simpan offset untuk posisi mouse relatif terhadap potongan puzzle
+        // Untuk mobile/tablet, offset dihitung secara berbeda
         if (e.type === 'mousedown') {
-            // Mouse events
+            // Mouse events - standard offset calculation
             draggedPiece.offsetX = e.clientX - rect.left;
             draggedPiece.offsetY = e.clientY - rect.top;
         } else {
-            // Touch events - perbaikan untuk perangkat tablet/mobile
+            // Touch events - calculate offset differently for touch devices
             const touch = e.touches[0];
             
-            // Untuk touch events pada tablet, gunakan posisi sentuhan langsung
-            draggedPiece.offsetX = touch.clientX - rect.left;
-            draggedPiece.offsetY = touch.clientY - rect.top;
+            // Untuk perangkat touch, gunakan tengah kepingan puzzle sebagai offset
+            // Ini untuk menghindari loncatan saat pertama kali di-drag
+            if (isMobile) {
+                // Gunakan pusat kepingan puzzle (setengah lebar dan tinggi)
+                draggedPiece.offsetX = rect.width / 2;
+                draggedPiece.offsetY = rect.height / 2;
+            } else {
+                // Untuk tablet, gunakan offset standar
+                draggedPiece.offsetX = touch.clientX - rect.left;
+                draggedPiece.offsetY = touch.clientY - rect.top;
+            }
         }
         
-        // Simpan parent container awal (puzzleBoard atau referenceContainer)
+        // Simpan parent container awal
         draggedPiece.startContainer = element.parentNode;
-        
-        // Simpan posisi awal
-        draggedPiece.startLeft = parseInt(element.style.left) || 0;
-        draggedPiece.startTop = parseInt(element.style.top) || 0;
     }
     
-    // Fungsi untuk melakukan drag
+    // Fungsi untuk memindahkan kepingan puzzle
     function drag(e) {
         if (!draggedPiece) return;
-        e.preventDefault();
         
+        e.preventDefault();
+
         let clientX, clientY;
+        
+        // Ambil koordinat berdasarkan jenis event
         if (e.type === 'mousemove') {
             clientX = e.clientX;
             clientY = e.clientY;
         } else {
-            // Touch events - pastikan kita mendapatkan lokasi touch yang tepat
             const touch = e.touches[0];
             clientX = touch.clientX;
             clientY = touch.clientY;
         }
         
-        // Jika elemen belum dipindahkan ke body, pindahkan sekarang dengan posisi yang sama
+        // Pindahkan kepingan puzzle ke body jika belum
         if (draggedPiece.element.parentNode !== document.body) {
-            // Simpan posisi dan dimensi saat ini
+            // Simpan posisi sebelum pindah ke body
             const rect = draggedPiece.element.getBoundingClientRect();
             
             // Pindahkan ke body
             document.body.appendChild(draggedPiece.element);
             
-            // Setel posisi absolut yang sama relatif terhadap viewport
-            draggedPiece.element.style.transition = 'none';
-            draggedPiece.element.style.position = 'absolute';
-            draggedPiece.element.style.left = `${rect.left}px`;
-            draggedPiece.element.style.top = `${rect.top}px`;
-            
-            // Beri waktu browser untuk merender
-            void draggedPiece.element.offsetWidth;
+            // Setel posisi awal pada body sesuai posisi sebelumnya
+            draggedPiece.element.style.position = 'fixed';
+            draggedPiece.element.style.left = rect.left + 'px';
+            draggedPiece.element.style.top = rect.top + 'px';
+            draggedPiece.element.style.margin = '0';
         }
         
-        // Update posisi langsung tanpa transisi
-        draggedPiece.element.style.transition = 'none';
-        draggedPiece.element.style.position = 'absolute';
-        
-        // Gunakan posisi jari/mouse langsung 
-        draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX}px`;
-        draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY}px`;
+        // Update posisi kepingan puzzle - langsung setel posisi tanpa kalkulator offset
+        draggedPiece.element.style.left = (clientX - draggedPiece.offsetX) + 'px';
+        draggedPiece.element.style.top = (clientY - draggedPiece.offsetY) + 'px';
     }
     
     // Fungsi untuk mengakhiri drag

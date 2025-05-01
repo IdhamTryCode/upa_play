@@ -649,16 +649,31 @@ button {
 }
 
 /* Touch-specific styles */
-@media (hover: none) and (pointer: coarse) {
-    /* Perangkat touch (tablet, mobile) */
+@media (pointer: coarse) {
     .puzzle-piece {
-        /* Ukuran bantalan jari yang lebih besar */
         touch-action: none; /* Mencegah gesture browser default */
     }
     
     .puzzle-piece.dragging {
-        opacity: 0.8; /* Sedikit transparan agar jari bisa melihat posisi */
-        transform: none !important; /* Tanpa transformasi untuk menghindari loncatan */
-        z-index: 2000 !important;
+        opacity: 0.9;
+        transform: none !important;
+        transition: none !important;
+        cursor: grabbing;
+        z-index: 1000 !important;
     }
+}
+
+/* Touch-specific style untuk menunjukkan piece yang aktif */
+.puzzle-piece:active {
+    transition: none !important;
+    transform: none !important;
+}
+
+/* Style untuk piece yang sedang di-drag */
+.puzzle-piece.dragging {
+    opacity: 0.9;
+    transform: none !important;
+    transition: none !important;
+    cursor: grabbing;
+    z-index: 1000 !important;
 } 
