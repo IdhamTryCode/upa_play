@@ -646,4 +646,19 @@ button {
         padding: 12px 25px;
         font-size: 1rem;
     }
+}
+
+/* Touch-specific styles */
+@media (hover: none) and (pointer: coarse) {
+    /* Perangkat touch (tablet, mobile) */
+    .puzzle-piece {
+        /* Ukuran bantalan jari yang lebih besar */
+        touch-action: none; /* Mencegah gesture browser default */
+    }
+    
+    .puzzle-piece.dragging {
+        opacity: 0.7; /* Lebih transparan agar jari bisa melihat posisi */
+        transform: scale(1.05) !important; /* Sedikit lebih besar agar lebih terlihat */
+        z-index: 2000 !important;
+    }
 } 

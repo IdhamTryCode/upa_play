@@ -321,11 +321,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simpan offset untuk posisi mouse relatif terhadap potongan puzzle
         const rect = element.getBoundingClientRect();
         if (e.type === 'mousedown') {
+            // Mouse events
             draggedPiece.offsetX = e.clientX - rect.left;
             draggedPiece.offsetY = e.clientY - rect.top;
         } else {
-            draggedPiece.offsetX = e.touches[0].clientX - rect.left;
-            draggedPiece.offsetY = e.touches[0].clientY - rect.top;
+            // Touch events - perbaikan untuk perangkat tablet/mobile
+            const touch = e.touches[0];
+            
+            // Untuk touch events, gunakan offset yang lebih kecil agar kepingan lebih dekat ke jari
+            // Ini membantu agar posisi kepingan lebih sesuai dengan jari pengguna
+            const touchOffsetFactor = 0.5; // Faktor pengali untuk offset touch event
+            
+            draggedPiece.offsetX = (touch.clientX - rect.left) * touchOffsetFactor;
+            draggedPiece.offsetY = (touch.clientY - rect.top) * touchOffsetFactor;
         }
         
         // Simpan parent container awal (puzzleBoard atau referenceContainer)
@@ -342,15 +350,17 @@ document.addEventListener('DOMContentLoaded', () => {
             clientX = e.clientX;
             clientY = e.clientY;
         } else {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
+            // Touch events - pastikan kita mendapatkan lokasi touch yang tepat
+            const touch = e.touches[0];
+            clientX = touch.clientX;
+            clientY = touch.clientY;
         }
         
         // Update posisi langsung tanpa transisi
         draggedPiece.element.style.transition = 'none';
         draggedPiece.element.style.position = 'absolute';
         
-        // Gunakan transform untuk pergerakan yang lebih mulus
+        // Gunakan posisi jari/mouse langsung untuk tablet
         draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX}px`;
         draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY}px`;
         
@@ -383,19 +393,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 clientY = e.clientY;
             } else {
                 // Untuk touchend, ambil posisi terakhir dari changedTouches
+                // Ini penting karena touch sudah dilepas saat event dipicu
                 const touch = e.changedTouches[0];
                 clientX = touch.clientX;
                 clientY = touch.clientY;
+                
+                // Bantu tablet dengan menambahkan offset khusus untuk touch
+                // Ini karena posisi touch sering tidak tepat di tengah jari
+                const touchOffset = 10; // pixel
+                if (isMobile) {
+                    clientY -= touchOffset; // Sesuaikan posisi touch sedikit ke atas
+                }
             }
             
             // Cek apakah mouse/touch berada di area referenceContainer
             const refRect = referenceContainer.getBoundingClientRect();
-            if (
+            const puzzleBoardRect = puzzleBoard.getBoundingClientRect();
+            
+            // Deteksi apakah touch/mouse berada di area referenceContainer
+            const isInReferenceContainer = (
                 clientX >= refRect.left && 
                 clientX <= refRect.right && 
                 clientY >= refRect.top && 
                 clientY <= refRect.bottom
-            ) {
+            );
+            
+            if (isInReferenceContainer) {
                 // Mouse/touch berada di referenceContainer
                 targetContainer = referenceContainer;
                 
