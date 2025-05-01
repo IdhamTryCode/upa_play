@@ -1,24 +1,19 @@
 // Logika untuk game Jigsaw Puzzle
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen-elemen DOM
-    const mainMenu = document.getElementById('main-menu');
     const gameScreen = document.getElementById('game-screen');
-    const puzzleGrid = document.querySelector('.puzzle-grid');
     const puzzleBoard = document.getElementById('puzzle-board');
     const difficultySelect = document.getElementById('difficulty');
     const shuffleButton = document.getElementById('shuffle-button');
-    const successMessage = document.getElementById('success-message');
+    const successModal = document.getElementById('success-modal');
     const playAgainButton = document.getElementById('play-again');
-    const backButton = document.getElementById('back-button');
     const referenceImage = document.getElementById('reference-image');
     const referencePanel = document.querySelector('.reference-panel');
     const referenceContainer = document.querySelector('.reference-image-container');
     
     // Setup musik background
     const bgMusic = [
-        'sounds/music1.mp3',
-        'sounds/music2.mp3',
-        'sounds/music3.mp3'
+        'sounds/music1.mp3'
     ];
     
     let currentMusicIndex = Math.floor(Math.random() * bgMusic.length);
@@ -121,39 +116,23 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 6, src: 'images/puzzle6.jpg', name: 'Puzzle 6' },
         { id: 7, src: 'images/puzzle7.jpg', name: 'Puzzle 7' },
         { id: 8, src: 'images/puzzle8.jpg', name: 'Puzzle 8' },
-        { id: 9, src: 'images/puzzle9.jpg', name: 'Puzzle 9' }
+        { id: 9, src: 'images/puzzle9.jpg', name: 'Puzzle 9' },
+        { id: 10, src: 'images/puzzle10.png', name: 'Puzzle 10' },
+        { id: 11, src: 'images/puzzle11.jpg', name: 'Puzzle 11' },
+        { id: 12, src: 'images/puzzle12.jpg', name: 'Puzzle 12' },
+        { id: 13, src: 'images/puzzle13.png', name: 'Puzzle 13' },
+        { id: 14, src: 'images/puzzle14.jpg', name: 'Puzzle 14' },
+        { id: 15, src: 'images/puzzle15.jpg', name: 'Puzzle 15' },
+        { id: 16, src: 'images/puzzle16.jpg', name: 'Puzzle 16' },
+        { id: 17, src: 'images/puzzle17.jpg', name: 'Puzzle 17' },
+        { id: 18, src: 'images/puzzle18.jpg', name: 'Puzzle 18' },
+        { id: 19, src: 'images/puzzle19.jpg', name: 'Puzzle 19' },
+        { id: 20, src: 'images/puzzle20.jpg', name: 'Puzzle 20' },
+        { id: 21, src: 'images/puzzle21.jpg', name: 'Puzzle 21' },
+        { id: 22, src: 'images/puzzle22.jpg', name: 'Puzzle 22' },
+        { id: 23, src: 'images/puzzle23.jpg', name: 'Puzzle 23' },
+        { id: 24, src: 'images/puzzle24.png', name: 'Puzzle 24' }
     ];
-    
-    // Fungsi untuk membuat menu utama
-    function createMainMenu() {
-        // Bersihkan grid
-        puzzleGrid.innerHTML = '';
-        
-        // Buat card untuk setiap gambar puzzle
-        puzzleImages.forEach(puzzle => {
-            const card = document.createElement('div');
-            card.className = 'puzzle-card';
-            card.dataset.id = puzzle.id;
-            
-            const img = document.createElement('img');
-            img.src = puzzle.src;
-            img.alt = puzzle.name;
-            
-            const name = document.createElement('div');
-            name.className = 'name';
-            name.textContent = puzzle.name;
-            
-            card.appendChild(img);
-            card.appendChild(name);
-            
-            // Event listener untuk memilih puzzle
-            card.addEventListener('click', () => {
-                startGame(puzzle);
-            });
-            
-            puzzleGrid.appendChild(card);
-        });
-    }
     
     // Fungsi untuk memulai permainan
     function startGame(puzzle) {
@@ -163,12 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Atur gambar referensi
         document.getElementById('reference-image').src = currentPuzzleImage;
         
-        // Sembunyikan main menu dan tampilkan game screen
-        mainMenu.classList.add('hidden');
-        gameScreen.classList.remove('hidden');
-        
         // Reset status permainan
         correctPieces = 0;
+        
+        // Bersihkan kotak reference
+        while (referenceContainer.children.length > 1) {
+            const child = referenceContainer.lastChild;
+            if (child !== referenceImage) {
+                referenceContainer.removeChild(child);
+            }
+        }
         
         // Buat potongan puzzle
         createPuzzlePieces();
@@ -178,16 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pieces.forEach(piece => {
             void piece.element.offsetWidth;
         });
-    }
-    
-    // Fungsi untuk kembali ke menu utama
-    function backToMainMenu() {
-        // Sembunyikan game screen dan tampilkan main menu
-        gameScreen.classList.add('hidden');
-        mainMenu.classList.remove('hidden');
-        
-        // Sembunyikan pesan sukses jika ada
-        successMessage.classList.add('hidden');
     }
     
     // Fungsi untuk membuat potongan puzzle
@@ -244,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fungsi untuk mengacak potongan puzzle
     function shufflePieces() {
-        successMessage.classList.add('hidden');
+        successModal.classList.add('hidden');
         
         // Nonaktifkan semua transisi untuk meningkatkan performa shuffle
         pieces.forEach(piece => {
@@ -521,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fungsi untuk menampilkan pesan sukses
     function showSuccessMessage() {
-        successMessage.classList.remove('hidden');
+        successModal.classList.remove('hidden');
         
         // Putar suara sukses (jika ada)
         try {
@@ -531,19 +504,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Event listeners
-    difficultySelect.addEventListener('change', () => {
-        gridSize = parseInt(difficultySelect.value);
-        createPuzzlePieces();
-    });
+    // Mulai permainan dengan gambar acak ketika halaman dimuat
+    function startRandomPuzzle() {
+        // Pilih puzzle acak dari daftar gambar
+        const randomIndex = Math.floor(Math.random() * puzzleImages.length);
+        const randomPuzzle = puzzleImages[randomIndex];
+        
+        // Mulai permainan dengan puzzle acak
+        startGame(randomPuzzle);
+    }
     
-    shuffleButton.addEventListener('click', shufflePieces);
-    
-    playAgainButton.addEventListener('click', () => {
+    // Event listener untuk tombol "Acak Ulang"
+    shuffleButton.addEventListener('click', () => {
         shufflePieces();
     });
     
-    backButton.addEventListener('click', backToMainMenu);
+    // Event listener untuk tombol "Main Lagi"
+    playAgainButton.addEventListener('click', () => {
+        successModal.classList.add('hidden');
+        startRandomPuzzle();
+    });
+    
+    // Event listener untuk perubahan tingkat kesulitan
+    difficultySelect.addEventListener('change', () => {
+        gridSize = parseInt(difficultySelect.value);
+        startRandomPuzzle();
+    });
     
     // Fungsi utilitas untuk mencegah scrolling saat drag di mobile
     document.body.addEventListener('touchmove', function(e) {
@@ -552,6 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
     
-    // Inisialisasi menu utama
-    createMainMenu();
+    // Mulai permainan dengan gambar acak saat halaman dimuat
+    startRandomPuzzle();
 }); 

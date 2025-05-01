@@ -22,18 +22,8 @@
         <button id="music-toggle">🔊</button>
     </div>
 
-    <div class="container" id="main-menu">
-        <h1>🧩Upa's Playground</h1>
-        <p class="subtitle">Pilih gambar puzzle yang ingin kamu mainkan!</p>
-        
-        <div class="puzzle-grid">
-            <!-- Puzzle thumbnails akan diisi oleh JavaScript -->
-        </div>
-    </div>
-
-    <div class="container hidden" id="game-screen">
+    <div class="container" id="game-screen">
         <div class="header">
-            <button id="back-button">← Kembali</button>
             <h1>🧩Upa's Playground</h1>
         </div>
         
@@ -62,8 +52,23 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div id="success-message" class="hidden">
+    <!-- Modal Success -->
+    <div id="success-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="confetti">
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+                <div class="confetti-piece"></div>
+            </div>
             <h2>Yeay! Puzzle selesai 🎉</h2>
             <button id="play-again">Main Lagi</button>
         </div>
