@@ -1,5 +1,30 @@
 // Logika untuk game Jigsaw Puzzle
 document.addEventListener('DOMContentLoaded', () => {
+    // Deteksi perangkat dan browser untuk pengaturan performa
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    // Setel preferensi performa
+    const useCssTransform = isMobile; // Gunakan transform untuk perangkat mobile
+    const lowerQualityOnMobile = isMobile; // Kurangi kualitas visual pada perangkat mobile
+    
+    // Mencegah momentum scroll dan perilaku lain yang mengganggu
+    if (isMobile) {
+        document.body.addEventListener('touchmove', function(e) {
+            if (draggedPiece) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Nonaktifkan double-tap zoom pada iOS
+        document.addEventListener('touchend', function(e) {
+            if (e.touches.length === 0) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+    
     // Elemen-elemen DOM
     const gameScreen = document.getElementById('game-screen');
     const puzzleBoard = document.getElementById('puzzle-board');
@@ -76,9 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mainkan musik pertama saat halaman dimuat
     playNextMusic();
     
-    // Deteksi apakah perangkat mobile
-    const isMobile = window.innerWidth <= 600;
-    
     // Konstanta baru untuk ukuran puzzle dan toleransi magnet
     const PUZZLE_BOARD_SIZE = isMobile ? 300 : 400;
     const MAGNET_THRESHOLD = 40; // Jarak dalam piksel untuk efek magnet
@@ -133,6 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 23, src: 'images/puzzle23.jpg', name: 'Puzzle 23' },
         { id: 24, src: 'images/puzzle24.png', name: 'Puzzle 24' }
     ];
+    
+    // Simpan koordinat terakhir untuk mendeteksi pergerakan yang minimal
+    let lastX = 0, lastY = 0;
+    const MOVE_THRESHOLD = 1; // Minimal pergerakan untuk memperbarui posisi (dalam piksel)
     
     // Fungsi untuk memulai permainan
     function startGame(puzzle) {
@@ -322,8 +348,13 @@ document.addEventListener('DOMContentLoaded', () => {
             draggedPiece.offsetX = e.clientX - rect.left;
             draggedPiece.offsetY = e.clientY - rect.top;
         } else {
-            draggedPiece.offsetX = e.touches[0].clientX - rect.left;
-            draggedPiece.offsetY = e.touches[0].clientY - rect.top;
+            // Tambahkan perhitungan offset yang lebih tepat untuk touch devices
+            const touch = e.touches[0];
+            draggedPiece.offsetX = touch.clientX - rect.left;
+            draggedPiece.offsetY = touch.clientY - rect.top;
+            
+            // Simpan juga touch identifier untuk tracking yang lebih baik
+            draggedPiece.touchId = touch.identifier;
         }
         
         // Simpan parent container awal (puzzleBoard atau referenceContainer)
@@ -344,19 +375,39 @@ document.addEventListener('DOMContentLoaded', () => {
             clientY = e.touches[0].clientY;
         }
         
-        // Dapatkan posisi relatif terhadap halaman
-        const puzzleBoardRect = puzzleBoard.getBoundingClientRect();
-        const refContainerRect = referenceContainer.getBoundingClientRect();
+        // Cek apakah gerakan cukup signifikan untuk diperbarui
+        const deltaX = Math.abs(clientX - lastX);
+        const deltaY = Math.abs(clientY - lastY);
         
-        // Update posisi berdasarkan posisi mouse/touch relatif terhadap viewport
-        draggedPiece.element.style.position = 'absolute';
-        draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX - document.body.scrollLeft}px`;
-        draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY - document.body.scrollTop}px`;
-        
-        // Pastikan element masih di dalam document.body
-        if (draggedPiece.element.parentNode !== document.body) {
-            document.body.appendChild(draggedPiece.element);
+        if (deltaX < MOVE_THRESHOLD && deltaY < MOVE_THRESHOLD) {
+            return; // Gerakan terlalu kecil, skip update
         }
+        
+        lastX = clientX;
+        lastY = clientY;
+        
+        // Gunakan requestAnimationFrame untuk memastikan performa yang baik
+        requestAnimationFrame(() => {
+            // Update posisi dengan transformasi CSS daripada left/top untuk performa yang lebih baik
+            if (useCssTransform) {
+                const scrollX = window.scrollX || window.pageXOffset;
+                const scrollY = window.scrollY || window.pageYOffset;
+                
+                draggedPiece.element.style.position = 'fixed';
+                draggedPiece.element.style.transform = `translate3d(${clientX - draggedPiece.offsetX}px, ${clientY - draggedPiece.offsetY}px, 0)`;
+                draggedPiece.element.style.left = '0';
+                draggedPiece.element.style.top = '0';
+            } else {
+                draggedPiece.element.style.position = 'absolute';
+                draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX - document.body.scrollLeft}px`;
+                draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY - document.body.scrollTop}px`;
+            }
+            
+            // Pastikan element masih di dalam document.body
+            if (draggedPiece.element.parentNode !== document.body) {
+                document.body.appendChild(draggedPiece.element);
+            }
+        });
     }
     
     // Fungsi untuk mengakhiri drag
@@ -365,10 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Hilangkan kelas dragging
         draggedPiece.element.classList.remove('dragging');
-        draggedPiece.element.classList.remove('magnet-active');
-        
-        // Kembalikan position ke absolute
-        draggedPiece.element.style.position = 'absolute';
         
         // Cek posisi akhir mouse/touch relatif ke kedua container
         let x, y, targetContainer;
@@ -383,9 +430,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 clientY = e.clientY;
             } else {
                 // Untuk touchend, ambil posisi terakhir dari changedTouches
-                const touch = e.changedTouches[0];
-                clientX = touch.clientX;
-                clientY = touch.clientY;
+                let touchFound = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    // Pastikan kita menggunakan touch yang sama dengan yang kita track
+                    if (draggedPiece.touchId === touch.identifier) {
+                        clientX = touch.clientX;
+                        clientY = touch.clientY;
+                        touchFound = true;
+                        break;
+                    }
+                }
+                
+                // Jika tidak menemukan touch yang sama, gunakan touch pertama
+                if (!touchFound && e.changedTouches.length > 0) {
+                    const touch = e.changedTouches[0];
+                    clientX = touch.clientX;
+                    clientY = touch.clientY;
+                }
             }
             
             // Cek apakah mouse/touch berada di area referenceContainer
@@ -421,14 +483,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Potongan di posisi yang benar
                     targetContainer.appendChild(draggedPiece.element);
                     
-                    // Animasi ke posisi yang tepat
-                    draggedPiece.element.style.transition = 'left 0.3s ease, top 0.3s ease';
+                    // Reset positioning dan transformasi
+                    draggedPiece.element.style.position = 'absolute';
+                    draggedPiece.element.style.transform = 'none';
+                    
+                    // Langsung letakkan di posisi yang tepat tanpa animasi
+                    draggedPiece.element.style.transition = 'none';
                     draggedPiece.element.style.left = `${draggedPiece.correctX}px`;
                     draggedPiece.element.style.top = `${draggedPiece.correctY}px`;
                     draggedPiece.currentX = draggedPiece.correctX;
                     draggedPiece.currentY = draggedPiece.correctY;
                     
-                    // Tambahkan efek visual
+                    // Tambahkan efek visual yang minimal
                     draggedPiece.element.classList.add('correct');
                     draggedPiece.isPlaced = true;
                     
@@ -466,26 +532,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Fungsi untuk mengembalikan potongan ke posisi asalnya dengan animasi yang lebih ringan
         function returnPieceToOrigin() {
-            // Tambahkan efek visual untuk kembali (tanpa animasi rumit)
-            draggedPiece.element.classList.add('returning');
+            // Hapus transisi untuk kembali langsung tanpa animasi
+            draggedPiece.element.style.transition = 'none';
             
             // Kembalikan ke puzzleBoard
             puzzleBoard.appendChild(draggedPiece.element);
             
-            // Gunakan transisi yang lebih sederhana
-            draggedPiece.element.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
+            // Reset positioning ke absolute dan bersihkan transformasi
+            draggedPiece.element.style.position = 'absolute';
+            draggedPiece.element.style.transform = 'none';
+            
+            // Kembalikan langsung ke posisi awal tanpa animasi
             draggedPiece.element.style.left = `${draggedPiece.originalBoardX}px`;
             draggedPiece.element.style.top = `${draggedPiece.originalBoardY}px`;
             draggedPiece.currentX = draggedPiece.originalBoardX;
             draggedPiece.currentY = draggedPiece.originalBoardY;
             draggedPiece.element.style.zIndex = '1';
             draggedPiece.isPlaced = false;
-            
-            // Hapus class dan transisi setelah selesai untuk performa
-            setTimeout(() => {
-                draggedPiece.element.classList.remove('returning');
-                draggedPiece.element.style.transition = 'none';
-            }, 300); // Waktu yang lebih pendek
         }
         
         // Reset draggedPiece
@@ -535,13 +598,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gridSize = parseInt(difficultySelect.value);
         startRandomPuzzle();
     });
-    
-    // Fungsi utilitas untuk mencegah scrolling saat drag di mobile
-    document.body.addEventListener('touchmove', function(e) {
-        if (draggedPiece) {
-            e.preventDefault();
-        }
-    }, { passive: false });
     
     // Mulai permainan dengan gambar acak saat halaman dimuat
     startRandomPuzzle();
