@@ -592,14 +592,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Mulai permainan dengan gambar acak ketika halaman dimuat
-    function startRandomPuzzle() {
-        // Pilih puzzle acak dari daftar gambar
-        const randomIndex = Math.floor(Math.random() * puzzleImages.length);
-        const randomPuzzle = puzzleImages[randomIndex];
+    // Fungsi untuk preload semua gambar puzzle
+    function preloadAllImages() {
+        // Buat array promises
+        const promises = puzzleImages.map(puzzle => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(puzzle);
+                img.onerror = () => {
+                    console.warn(`Gagal memuat gambar: ${puzzle.src}`);
+                    resolve(null); // Resolve dengan null agar Promise.all tetap berjalan
+                };
+                img.src = puzzle.src;
+            });
+        });
         
-        // Mulai permainan dengan puzzle acak
-        startGame(randomPuzzle);
+        // Tangani semua promises
+        Promise.all(promises).then(results => {
+            // Filter gambar yang berhasil dimuat
+            const loadedImages = results.filter(img => img !== null);
+            console.log(`Berhasil memuat ${loadedImages.length} dari ${puzzleImages.length} gambar`);
+            
+            if (loadedImages.length > 0) {
+                // Mulai game dengan gambar yang berhasil dimuat pertama
+                startRandomPuzzle(loadedImages);
+            } else {
+                alert('Gagal memuat gambar puzzle. Periksa koneksi internet Anda dan coba lagi.');
+            }
+        });
+    }
+    
+    // Mulai permainan dengan gambar acak ketika halaman dimuat
+    function startRandomPuzzle(availableImages) {
+        // Gunakan availableImages jika disediakan, jika tidak gunakan puzzleImages
+        const imagePool = availableImages || puzzleImages;
+        
+        // Pilih puzzle acak dari daftar gambar
+        const randomIndex = Math.floor(Math.random() * imagePool.length);
+        const randomPuzzle = imagePool[randomIndex];
+        
+        // Preload gambar terlebih dahulu untuk memastikan bisa dimuat dengan benar
+        const preloadImg = new Image();
+        preloadImg.onload = function() {
+            console.log(`Gambar ${randomPuzzle.name} berhasil dimuat`);
+            // Mulai permainan dengan puzzle acak setelah gambar dimuat
+            startGame(randomPuzzle);
+        };
+        
+        preloadImg.onerror = function() {
+            console.error(`Gagal memuat gambar: ${randomPuzzle.src}`);
+            // Coba menggunakan gambar default atau gambar lain jika gagal
+            const fallbackIndex = 0; // Gunakan gambar pertama sebagai fallback
+            if (randomIndex !== fallbackIndex && imagePool.length > 1) {
+                const fallbackPuzzle = imagePool[fallbackIndex];
+                console.log(`Mencoba gambar fallback: ${fallbackPuzzle.name}`);
+                startGame(fallbackPuzzle);
+            } else {
+                // Jika bahkan fallback gagal, tampilkan pesan error
+                alert('Gagal memuat gambar puzzle. Silakan coba lagi.');
+            }
+        };
+        
+        // Mulai loading gambar
+        preloadImg.src = randomPuzzle.src;
     }
     
     // Event listener untuk tombol "Acak Ulang"
@@ -624,6 +679,6 @@ document.addEventListener('DOMContentLoaded', () => {
         startRandomPuzzle();
     });
     
-    // Mulai permainan dengan gambar acak saat halaman dimuat
-    startRandomPuzzle();
+    // Preload semua gambar terlebih dahulu, kemudian mulai permainan
+    preloadAllImages();
 }); 
