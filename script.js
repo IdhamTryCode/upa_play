@@ -1,19 +1,5 @@
 // Logika untuk game Jigsaw Puzzle
 document.addEventListener('DOMContentLoaded', () => {
-    // Deteksi perangkat dan browser untuk pengaturan performa
-    const isMobile = false; // Nonaktifkan mode mobile/responsive
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    
-    // Setel preferensi performa
-    const useCssTransform = false; // Gunakan metode standar untuk semua perangkat
-    const lowerQualityOnMobile = false; // Gunakan kualitas tinggi untuk semua perangkat
-    
-    // Konstanta untuk ukuran puzzle dan toleransi magnet
-    const PUZZLE_BOARD_SIZE = 400; // Tetapkan ukuran desktop untuk semua perangkat
-    const MAGNET_THRESHOLD = 40; // Jarak dalam piksel untuk efek magnet
-    const TOLERANCE = 20; // Toleransi untuk penempatan yang benar
-    
     // Elemen-elemen DOM
     const gameScreen = document.getElementById('game-screen');
     const puzzleBoard = document.getElementById('puzzle-board');
@@ -90,6 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mainkan musik pertama saat halaman dimuat
     playNextMusic();
     
+    // Deteksi apakah perangkat mobile
+    const isMobile = window.innerWidth <= 600;
+    
+    // Konstanta untuk ukuran puzzle
+    const PUZZLE_BOARD_SIZE = isMobile ? 300 : 400;
+    const TOLERANCE = 20; // Toleransi untuk penempatan yang benar
+    
+    // Sesuaikan ukuran board berdasarkan perangkat
+    if (isMobile) {
+        puzzleBoard.style.width = `${PUZZLE_BOARD_SIZE}px`;
+        puzzleBoard.style.height = `${PUZZLE_BOARD_SIZE}px`;
+        referenceContainer.style.width = `${PUZZLE_BOARD_SIZE}px`;
+        referenceContainer.style.height = `${PUZZLE_BOARD_SIZE}px`;
+    }
+    
     // Variabel untuk menyimpan state permainan
     let gridSize = parseInt(difficultySelect.value);
     let pieces = [];
@@ -131,10 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 23, src: 'images/puzzle23.jpg', name: 'Puzzle 23' },
         { id: 24, src: 'images/puzzle24.png', name: 'Puzzle 24' }
     ];
-    
-    // Simpan koordinat terakhir untuk mendeteksi pergerakan yang minimal
-    let lastX = 0, lastY = 0;
-    const MOVE_THRESHOLD = 1; // Minimal pergerakan untuk memperbarui posisi (dalam piksel)
     
     // Fungsi untuk memulai permainan
     function startGame(puzzle) {
@@ -225,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pieces.forEach(piece => {
             piece.element.style.transition = 'none';
             // Hapus semua kelas animasi
-            piece.element.classList.remove('correct', 'correct-counted', 'returning', 'dragging', 'magnet-active');
+            piece.element.classList.remove('correct', 'correct-counted', 'returning', 'dragging');
             piece.isPlaced = false;
             
             // Reset z-index
@@ -274,10 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
             piece.element.style.zIndex = `${1 + (index % 4)}`;
         });
         
-        // Aktifkan kembali transisi setelah semua potongan ditempatkan
+        // Pastikan tidak ada transisi untuk pergerakan yang lebih responsif
         setTimeout(() => {
             pieces.forEach(piece => {
-                piece.element.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
+                piece.element.style.transition = 'none';
             });
         }, 100);
         
@@ -309,6 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const element = e.target.closest('.puzzle-piece');
         if (!element) return;
         
+        // Pastikan tidak ada transisi saat mulai drag
+        element.style.transition = 'none';
+        
         // Tambahkan kelas dragging
         element.classList.add('dragging');
         
@@ -324,13 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
             draggedPiece.offsetX = e.clientX - rect.left;
             draggedPiece.offsetY = e.clientY - rect.top;
         } else {
-            // Tambahkan perhitungan offset yang lebih tepat untuk touch devices
-            const touch = e.touches[0];
-            draggedPiece.offsetX = touch.clientX - rect.left;
-            draggedPiece.offsetY = touch.clientY - rect.top;
-            
-            // Simpan juga touch identifier untuk tracking yang lebih baik
-            draggedPiece.touchId = touch.identifier;
+            draggedPiece.offsetX = e.touches[0].clientX - rect.left;
+            draggedPiece.offsetY = e.touches[0].clientY - rect.top;
         }
         
         // Simpan parent container awal (puzzleBoard atau referenceContainer)
@@ -351,39 +346,18 @@ document.addEventListener('DOMContentLoaded', () => {
             clientY = e.touches[0].clientY;
         }
         
-        // Cek apakah gerakan cukup signifikan untuk diperbarui
-        const deltaX = Math.abs(clientX - lastX);
-        const deltaY = Math.abs(clientY - lastY);
+        // Update posisi langsung tanpa transisi
+        draggedPiece.element.style.transition = 'none';
+        draggedPiece.element.style.position = 'absolute';
         
-        if (deltaX < MOVE_THRESHOLD && deltaY < MOVE_THRESHOLD) {
-            return; // Gerakan terlalu kecil, skip update
+        // Gunakan transform untuk pergerakan yang lebih mulus
+        draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX}px`;
+        draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY}px`;
+        
+        // Pastikan element masih di dalam document.body
+        if (draggedPiece.element.parentNode !== document.body) {
+            document.body.appendChild(draggedPiece.element);
         }
-        
-        lastX = clientX;
-        lastY = clientY;
-        
-        // Gunakan requestAnimationFrame untuk memastikan performa yang baik
-        requestAnimationFrame(() => {
-            // Update posisi dengan transformasi CSS daripada left/top untuk performa yang lebih baik
-            if (useCssTransform) {
-                const scrollX = window.scrollX || window.pageXOffset;
-                const scrollY = window.scrollY || window.pageYOffset;
-                
-                draggedPiece.element.style.position = 'fixed';
-                draggedPiece.element.style.transform = `translate3d(${clientX - draggedPiece.offsetX}px, ${clientY - draggedPiece.offsetY}px, 0)`;
-                draggedPiece.element.style.left = '0';
-                draggedPiece.element.style.top = '0';
-            } else {
-                draggedPiece.element.style.position = 'absolute';
-                draggedPiece.element.style.left = `${clientX - draggedPiece.offsetX - document.body.scrollLeft}px`;
-                draggedPiece.element.style.top = `${clientY - draggedPiece.offsetY - document.body.scrollTop}px`;
-            }
-            
-            // Pastikan element masih di dalam document.body
-            if (draggedPiece.element.parentNode !== document.body) {
-                document.body.appendChild(draggedPiece.element);
-            }
-        });
     }
     
     // Fungsi untuk mengakhiri drag
@@ -392,6 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Hilangkan kelas dragging
         draggedPiece.element.classList.remove('dragging');
+        
+        // Kembalikan position ke absolute
+        draggedPiece.element.style.position = 'absolute';
         
         // Cek posisi akhir mouse/touch relatif ke kedua container
         let x, y, targetContainer;
@@ -406,24 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 clientY = e.clientY;
             } else {
                 // Untuk touchend, ambil posisi terakhir dari changedTouches
-                let touchFound = false;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    // Pastikan kita menggunakan touch yang sama dengan yang kita track
-                    if (draggedPiece.touchId === touch.identifier) {
-                        clientX = touch.clientX;
-                        clientY = touch.clientY;
-                        touchFound = true;
-                        break;
-                    }
-                }
-                
-                // Jika tidak menemukan touch yang sama, gunakan touch pertama
-                if (!touchFound && e.changedTouches.length > 0) {
-                    const touch = e.changedTouches[0];
-                    clientX = touch.clientX;
-                    clientY = touch.clientY;
-                }
+                const touch = e.changedTouches[0];
+                clientX = touch.clientX;
+                clientY = touch.clientY;
             }
             
             // Cek apakah mouse/touch berada di area referenceContainer
@@ -459,18 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Potongan di posisi yang benar
                     targetContainer.appendChild(draggedPiece.element);
                     
-                    // Reset positioning dan transformasi
-                    draggedPiece.element.style.position = 'absolute';
-                    draggedPiece.element.style.transform = 'none';
-                    
-                    // Langsung letakkan di posisi yang tepat tanpa animasi
-                    draggedPiece.element.style.transition = 'none';
+                    // Posisikan langsung ke posisi yang tepat tanpa transisi
                     draggedPiece.element.style.left = `${draggedPiece.correctX}px`;
                     draggedPiece.element.style.top = `${draggedPiece.correctY}px`;
                     draggedPiece.currentX = draggedPiece.correctX;
                     draggedPiece.currentY = draggedPiece.correctY;
                     
-                    // Tambahkan efek visual yang minimal
+                    // Tambahkan efek visual
                     draggedPiece.element.classList.add('correct');
                     draggedPiece.isPlaced = true;
                     
@@ -497,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 } else {
-                    // Posisi tidak benar, kembalikan ke kotak kiri dengan animasi
+                    // Posisi tidak benar, kembalikan ke kotak kiri tanpa animasi
                     returnPieceToOrigin();
                 }
             } else {
@@ -506,25 +463,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Fungsi untuk mengembalikan potongan ke posisi asalnya dengan animasi yang lebih ringan
+        // Fungsi untuk mengembalikan potongan ke posisi asalnya tanpa animasi
         function returnPieceToOrigin() {
-            // Hapus transisi untuk kembali langsung tanpa animasi
-            draggedPiece.element.style.transition = 'none';
+            // Tambahkan efek visual untuk kembali (tanpa animasi rumit)
+            draggedPiece.element.classList.add('returning');
             
-            // Kembalikan ke puzzleBoard
+            // Kembalikan ke puzzleBoard tanpa transisi
             puzzleBoard.appendChild(draggedPiece.element);
             
-            // Reset positioning ke absolute dan bersihkan transformasi
-            draggedPiece.element.style.position = 'absolute';
-            draggedPiece.element.style.transform = 'none';
-            
-            // Kembalikan langsung ke posisi awal tanpa animasi
+            // Posisikan langsung tanpa transisi
+            draggedPiece.element.style.transition = 'none';
             draggedPiece.element.style.left = `${draggedPiece.originalBoardX}px`;
             draggedPiece.element.style.top = `${draggedPiece.originalBoardY}px`;
             draggedPiece.currentX = draggedPiece.originalBoardX;
             draggedPiece.currentY = draggedPiece.originalBoardY;
             draggedPiece.element.style.zIndex = '1';
             draggedPiece.isPlaced = false;
+            
+            // Hapus class returning setelah sedikit waktu
+            setTimeout(() => {
+                draggedPiece.element.classList.remove('returning');
+            }, 200);
         }
         
         // Reset draggedPiece
@@ -543,262 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Fungsi untuk preload semua gambar puzzle
-    function preloadAllImages() {
-        console.log("Memulai preload semua gambar... (Mode Desktop untuk semua perangkat)");
-        
-        // Untuk iPad dan iOS, gunakan pendekatan yang lebih sederhana
-        if (isIOS) {
-            console.log("Terdeteksi perangkat iOS, menggunakan mode desktop");
-        }
-        
-        // Tambahkan parameter cache-busting untuk mencegah caching
-        function getImageUrl(src) {
-            const cacheBuster = `?v=${new Date().getTime()}`;
-            return src + cacheBuster;
-        }
-        
-        // Buat array promises
-        const promises = puzzleImages.map((puzzle, index) => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                
-                // Set crossOrigin untuk mengatasi masalah CORS
-                img.crossOrigin = "Anonymous";
-                
-                // Deteksi loading berhasil
-                img.onload = () => {
-                    console.log(`✅ Gambar berhasil dimuat: ${puzzle.name}`);
-                    resolve(puzzle);
-                };
-                
-                // Deteksi error loading dengan detail
-                img.onerror = (err) => {
-                    console.warn(`❌ Gagal memuat gambar: ${puzzle.src}`, err);
-                    
-                    // Coba sekali lagi dengan cache busting
-                    const retryImg = new Image();
-                    retryImg.crossOrigin = "Anonymous";
-                    
-                    retryImg.onload = () => {
-                        console.log(`✅ Retry berhasil untuk gambar: ${puzzle.name}`);
-                        // Perbarui URL di array
-                        puzzle.src = getImageUrl(puzzle.src);
-                        resolve(puzzle);
-                    };
-                    
-                    retryImg.onerror = () => {
-                        console.error(`❌❌ Retry gagal untuk gambar: ${puzzle.src}`);
-                        
-                        // Jika gambar tidak bisa dimuat sama sekali, gunakan fallback sederhana
-                        if (index < 3) {
-                            // Untuk 3 gambar pertama, coba gunakan gambar placeholder
-                            const fallbackSrc = `https://via.placeholder.com/400x400?text=Puzzle+${index+1}`;
-                            console.log(`Mencoba fallback dari placeholder: ${fallbackSrc}`);
-                            
-                            const fallbackImg = new Image();
-                            fallbackImg.onload = () => {
-                                console.log(`✅ Fallback berhasil untuk gambar ${index+1}`);
-                                puzzle.src = fallbackSrc;
-                                resolve(puzzle);
-                            };
-                            
-                            fallbackImg.onerror = () => {
-                                console.error(`❌❌❌ Semua percobaan gagal untuk gambar ${index+1}`);
-                                resolve(null);
-                            };
-                            
-                            fallbackImg.src = fallbackSrc;
-                        } else {
-                            resolve(null);
-                        }
-                    };
-                    
-                    // Coba lagi dengan cache busting
-                    retryImg.src = getImageUrl(puzzle.src);
-                };
-                
-                // Mulai memuat gambar
-                img.src = puzzle.src;
-                
-                // Log untuk debugging
-                console.log(`🔄 Memulai loading: ${puzzle.name} (${puzzle.src})`);
-            });
-        });
-        
-        // Tangani semua promises
-        Promise.all(promises).then(results => {
-            // Filter gambar yang berhasil dimuat
-            const loadedImages = results.filter(img => img !== null);
-            console.log(`Berhasil memuat ${loadedImages.length} dari ${puzzleImages.length} gambar`);
-            
-            if (loadedImages.length > 0) {
-                // Mulai game dengan gambar yang berhasil dimuat pertama
-                startRandomPuzzle(loadedImages);
-            } else {
-                // Jika semua gambar gagal, buat gambar canvas default
-                console.error("Semua gambar gagal dimuat! Membuat gambar canvas default");
-                createFallbackImage();
-            }
-        }).catch(error => {
-            console.error("Error dalam Promise.all:", error);
-            createFallbackImage();
-        });
-    }
-    
-    // Fungsi untuk membuat gambar fallback menggunakan Canvas jika semua gambar gagal
-    function createFallbackImage() {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 400;
-            canvas.height = 400;
-            const ctx = canvas.getContext('2d');
-            
-            // Buat gradient background
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            gradient.addColorStop(0, '#3498db');
-            gradient.addColorStop(1, '#2980b9');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Tambahkan teks
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Jigsaw Puzzle Game', canvas.width/2, canvas.height/2 - 20);
-            ctx.font = '18px Arial';
-            ctx.fillText('Gambar tidak dapat dimuat', canvas.width/2, canvas.height/2 + 20);
-            
-            // Konversi ke data URL
-            const dataUrl = canvas.toDataURL('image/png');
-            
-            // Buat objek gambar fallback
-            const fallbackPuzzle = {
-                id: 0,
-                src: dataUrl,
-                name: 'Fallback Puzzle'
-            };
-            
-            // Mulai game dengan gambar fallback
-            startGame(fallbackPuzzle);
-            
-        } catch (e) {
-            console.error("Gagal membuat gambar fallback:", e);
-            alert('Gagal memuat gambar puzzle. Silakan refresh halaman dan coba lagi.');
-        }
-    }
-    
     // Mulai permainan dengan gambar acak ketika halaman dimuat
-    function startRandomPuzzle(availableImages) {
-        console.log("Memulai puzzle acak dengan", availableImages ? availableImages.length : 0, "gambar tersedia");
-        
-        // Gunakan availableImages jika disediakan, jika tidak gunakan puzzleImages
-        const imagePool = availableImages || puzzleImages;
-        
-        if (!imagePool || imagePool.length === 0) {
-            console.error("Tidak ada gambar tersedia!");
-            createFallbackImage();
-            return;
-        }
-        
+    function startRandomPuzzle() {
         // Pilih puzzle acak dari daftar gambar
-        const randomIndex = Math.floor(Math.random() * imagePool.length);
-        const randomPuzzle = imagePool[randomIndex];
+        const randomIndex = Math.floor(Math.random() * puzzleImages.length);
+        const randomPuzzle = puzzleImages[randomIndex];
         
-        if (!randomPuzzle || !randomPuzzle.src) {
-            console.error("Objek puzzle tidak valid:", randomPuzzle);
-            createFallbackImage();
-            return;
-        }
-        
-        console.log(`Memilih gambar: ${randomPuzzle.name} (${randomPuzzle.src})`);
-        
-        // Preload gambar terlebih dahulu untuk memastikan bisa dimuat dengan benar
-        const preloadImg = new Image();
-        
-        // Tambahkan timeout untuk menghindari hang
-        const loadTimeout = setTimeout(() => {
-            console.error(`Timeout saat loading gambar: ${randomPuzzle.src}`);
-            preloadImg.src = ''; // Cancel loading
-            
-            // Coba fallback atau gambar lain
-            if (imagePool.length > 1) {
-                const nextIndex = (randomIndex + 1) % imagePool.length;
-                const nextPuzzle = imagePool[nextIndex];
-                console.log(`Timeout - coba gambar berikutnya: ${nextPuzzle.name}`);
-                
-                // Recursive call dengan gambar lain
-                const reducedPool = imagePool.filter((_, i) => i !== randomIndex);
-                startRandomPuzzle(reducedPool);
-            } else {
-                createFallbackImage();
-            }
-        }, 10000); // 10 detik timeout
-        
-        preloadImg.onload = function() {
-            clearTimeout(loadTimeout);
-            console.log(`✅ Gambar final ${randomPuzzle.name} berhasil dimuat, memulai game...`);
-            
-            // Buat versi gambar yang lebih "aman" untuk iPad
-            if (isIOS) {
-                console.log("Memproses gambar khusus untuk iOS...");
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = preloadImg.width;
-                    canvas.height = preloadImg.height;
-                    ctx.drawImage(preloadImg, 0, 0);
-                    
-                    // Konversi ke data URL untuk iOS
-                    const safeDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    randomPuzzle.src = safeDataUrl;
-                    console.log("Gambar berhasil dikonversi untuk iOS");
-                } catch (e) {
-                    console.error("Gagal mengkonversi gambar untuk iOS:", e);
-                    // Lanjutkan dengan gambar original jika konversi gagal
-                }
-            }
-            
-            // Mulai permainan dengan puzzle acak setelah gambar dimuat
-            startGame(randomPuzzle);
-        };
-        
-        preloadImg.onerror = function(err) {
-            clearTimeout(loadTimeout);
-            console.error(`❌ Gagal memuat gambar final: ${randomPuzzle.src}`, err);
-            
-            // Coba menggunakan gambar default atau gambar lain jika gagal
-            if (imagePool.length > 1) {
-                console.log("Mencoba gambar lain dari pool...");
-                const reducedPool = imagePool.filter((_, i) => i !== randomIndex);
-                startRandomPuzzle(reducedPool);
-            } else {
-                console.error("Tidak ada gambar lain tersedia, menggunakan fallback");
-                createFallbackImage();
-            }
-        };
-        
-        // Log untuk debugging
-        console.log(`🔄 Loading gambar final: ${randomPuzzle.src}`);
-        
-        // Mulai loading gambar
-        preloadImg.src = randomPuzzle.src;
-        
-        // Untuk iOS, coba force download terlebih dahulu
-        if (isIOS) {
-            console.log("Force download untuk iOS");
-            fetch(randomPuzzle.src)
-                .then(response => response.blob())
-                .then(blob => {
-                    const objectURL = URL.createObjectURL(blob);
-                    console.log("Berhasil membuat objectURL:", objectURL);
-                    preloadImg.src = objectURL;
-                })
-                .catch(error => {
-                    console.error("Fetch gagal:", error);
-                    // Tetap gunakan src original jika fetch gagal
-                });
-        }
+        // Mulai permainan dengan puzzle acak
+        startGame(randomPuzzle);
     }
     
     // Event listener untuk tombol "Acak Ulang"
@@ -823,6 +534,13 @@ document.addEventListener('DOMContentLoaded', () => {
         startRandomPuzzle();
     });
     
-    // Preload semua gambar terlebih dahulu, kemudian mulai permainan
-    preloadAllImages();
+    // Fungsi utilitas untuk mencegah scrolling saat drag di mobile
+    document.body.addEventListener('touchmove', function(e) {
+        if (draggedPiece) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Mulai permainan dengan gambar acak saat halaman dimuat
+    startRandomPuzzle();
 }); 
