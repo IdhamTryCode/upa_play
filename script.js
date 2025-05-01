@@ -594,16 +594,84 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fungsi untuk preload semua gambar puzzle
     function preloadAllImages() {
+        console.log("Memulai preload semua gambar...");
+        
+        // Untuk iPad dan iOS, force reload dulu
+        if (isIOS) {
+            console.log("Terdeteksi perangkat iOS, menerapkan teknik khusus loading gambar");
+        }
+        
+        // Tambahkan parameter cache-busting untuk mencegah caching
+        function getImageUrl(src) {
+            const cacheBuster = `?v=${new Date().getTime()}`;
+            return src + cacheBuster;
+        }
+        
         // Buat array promises
-        const promises = puzzleImages.map(puzzle => {
+        const promises = puzzleImages.map((puzzle, index) => {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => resolve(puzzle);
-                img.onerror = () => {
-                    console.warn(`Gagal memuat gambar: ${puzzle.src}`);
-                    resolve(null); // Resolve dengan null agar Promise.all tetap berjalan
+                
+                // Set crossOrigin untuk mengatasi masalah CORS
+                img.crossOrigin = "Anonymous";
+                
+                // Deteksi loading berhasil
+                img.onload = () => {
+                    console.log(`✅ Gambar berhasil dimuat: ${puzzle.name}`);
+                    resolve(puzzle);
                 };
+                
+                // Deteksi error loading dengan detail
+                img.onerror = (err) => {
+                    console.warn(`❌ Gagal memuat gambar: ${puzzle.src}`, err);
+                    
+                    // Coba sekali lagi dengan cache busting
+                    const retryImg = new Image();
+                    retryImg.crossOrigin = "Anonymous";
+                    
+                    retryImg.onload = () => {
+                        console.log(`✅ Retry berhasil untuk gambar: ${puzzle.name}`);
+                        // Perbarui URL di array
+                        puzzle.src = getImageUrl(puzzle.src);
+                        resolve(puzzle);
+                    };
+                    
+                    retryImg.onerror = () => {
+                        console.error(`❌❌ Retry gagal untuk gambar: ${puzzle.src}`);
+                        
+                        // Jika gambar tidak bisa dimuat sama sekali, gunakan fallback sederhana
+                        if (index < 3) {
+                            // Untuk 3 gambar pertama, coba gunakan gambar placeholder
+                            const fallbackSrc = `https://via.placeholder.com/400x400?text=Puzzle+${index+1}`;
+                            console.log(`Mencoba fallback dari placeholder: ${fallbackSrc}`);
+                            
+                            const fallbackImg = new Image();
+                            fallbackImg.onload = () => {
+                                console.log(`✅ Fallback berhasil untuk gambar ${index+1}`);
+                                puzzle.src = fallbackSrc;
+                                resolve(puzzle);
+                            };
+                            
+                            fallbackImg.onerror = () => {
+                                console.error(`❌❌❌ Semua percobaan gagal untuk gambar ${index+1}`);
+                                resolve(null);
+                            };
+                            
+                            fallbackImg.src = fallbackSrc;
+                        } else {
+                            resolve(null);
+                        }
+                    };
+                    
+                    // Coba lagi dengan cache busting
+                    retryImg.src = getImageUrl(puzzle.src);
+                };
+                
+                // Mulai memuat gambar
                 img.src = puzzle.src;
+                
+                // Log untuk debugging
+                console.log(`🔄 Memulai loading: ${puzzle.name} (${puzzle.src})`);
             });
         });
         
@@ -617,44 +685,169 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mulai game dengan gambar yang berhasil dimuat pertama
                 startRandomPuzzle(loadedImages);
             } else {
-                alert('Gagal memuat gambar puzzle. Periksa koneksi internet Anda dan coba lagi.');
+                // Jika semua gambar gagal, buat gambar canvas default
+                console.error("Semua gambar gagal dimuat! Membuat gambar canvas default");
+                createFallbackImage();
             }
+        }).catch(error => {
+            console.error("Error dalam Promise.all:", error);
+            createFallbackImage();
         });
+    }
+    
+    // Fungsi untuk membuat gambar fallback menggunakan Canvas jika semua gambar gagal
+    function createFallbackImage() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            
+            // Buat gradient background
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#3498db');
+            gradient.addColorStop(1, '#2980b9');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Tambahkan teks
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Jigsaw Puzzle Game', canvas.width/2, canvas.height/2 - 20);
+            ctx.font = '18px Arial';
+            ctx.fillText('Gambar tidak dapat dimuat', canvas.width/2, canvas.height/2 + 20);
+            
+            // Konversi ke data URL
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            // Buat objek gambar fallback
+            const fallbackPuzzle = {
+                id: 0,
+                src: dataUrl,
+                name: 'Fallback Puzzle'
+            };
+            
+            // Mulai game dengan gambar fallback
+            startGame(fallbackPuzzle);
+            
+        } catch (e) {
+            console.error("Gagal membuat gambar fallback:", e);
+            alert('Gagal memuat gambar puzzle. Silakan refresh halaman dan coba lagi.');
+        }
     }
     
     // Mulai permainan dengan gambar acak ketika halaman dimuat
     function startRandomPuzzle(availableImages) {
+        console.log("Memulai puzzle acak dengan", availableImages ? availableImages.length : 0, "gambar tersedia");
+        
         // Gunakan availableImages jika disediakan, jika tidak gunakan puzzleImages
         const imagePool = availableImages || puzzleImages;
+        
+        if (!imagePool || imagePool.length === 0) {
+            console.error("Tidak ada gambar tersedia!");
+            createFallbackImage();
+            return;
+        }
         
         // Pilih puzzle acak dari daftar gambar
         const randomIndex = Math.floor(Math.random() * imagePool.length);
         const randomPuzzle = imagePool[randomIndex];
         
+        if (!randomPuzzle || !randomPuzzle.src) {
+            console.error("Objek puzzle tidak valid:", randomPuzzle);
+            createFallbackImage();
+            return;
+        }
+        
+        console.log(`Memilih gambar: ${randomPuzzle.name} (${randomPuzzle.src})`);
+        
         // Preload gambar terlebih dahulu untuk memastikan bisa dimuat dengan benar
         const preloadImg = new Image();
+        
+        // Tambahkan timeout untuk menghindari hang
+        const loadTimeout = setTimeout(() => {
+            console.error(`Timeout saat loading gambar: ${randomPuzzle.src}`);
+            preloadImg.src = ''; // Cancel loading
+            
+            // Coba fallback atau gambar lain
+            if (imagePool.length > 1) {
+                const nextIndex = (randomIndex + 1) % imagePool.length;
+                const nextPuzzle = imagePool[nextIndex];
+                console.log(`Timeout - coba gambar berikutnya: ${nextPuzzle.name}`);
+                
+                // Recursive call dengan gambar lain
+                const reducedPool = imagePool.filter((_, i) => i !== randomIndex);
+                startRandomPuzzle(reducedPool);
+            } else {
+                createFallbackImage();
+            }
+        }, 10000); // 10 detik timeout
+        
         preloadImg.onload = function() {
-            console.log(`Gambar ${randomPuzzle.name} berhasil dimuat`);
+            clearTimeout(loadTimeout);
+            console.log(`✅ Gambar final ${randomPuzzle.name} berhasil dimuat, memulai game...`);
+            
+            // Buat versi gambar yang lebih "aman" untuk iPad
+            if (isIOS) {
+                console.log("Memproses gambar khusus untuk iOS...");
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = preloadImg.width;
+                    canvas.height = preloadImg.height;
+                    ctx.drawImage(preloadImg, 0, 0);
+                    
+                    // Konversi ke data URL untuk iOS
+                    const safeDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    randomPuzzle.src = safeDataUrl;
+                    console.log("Gambar berhasil dikonversi untuk iOS");
+                } catch (e) {
+                    console.error("Gagal mengkonversi gambar untuk iOS:", e);
+                    // Lanjutkan dengan gambar original jika konversi gagal
+                }
+            }
+            
             // Mulai permainan dengan puzzle acak setelah gambar dimuat
             startGame(randomPuzzle);
         };
         
-        preloadImg.onerror = function() {
-            console.error(`Gagal memuat gambar: ${randomPuzzle.src}`);
+        preloadImg.onerror = function(err) {
+            clearTimeout(loadTimeout);
+            console.error(`❌ Gagal memuat gambar final: ${randomPuzzle.src}`, err);
+            
             // Coba menggunakan gambar default atau gambar lain jika gagal
-            const fallbackIndex = 0; // Gunakan gambar pertama sebagai fallback
-            if (randomIndex !== fallbackIndex && imagePool.length > 1) {
-                const fallbackPuzzle = imagePool[fallbackIndex];
-                console.log(`Mencoba gambar fallback: ${fallbackPuzzle.name}`);
-                startGame(fallbackPuzzle);
+            if (imagePool.length > 1) {
+                console.log("Mencoba gambar lain dari pool...");
+                const reducedPool = imagePool.filter((_, i) => i !== randomIndex);
+                startRandomPuzzle(reducedPool);
             } else {
-                // Jika bahkan fallback gagal, tampilkan pesan error
-                alert('Gagal memuat gambar puzzle. Silakan coba lagi.');
+                console.error("Tidak ada gambar lain tersedia, menggunakan fallback");
+                createFallbackImage();
             }
         };
         
+        // Log untuk debugging
+        console.log(`🔄 Loading gambar final: ${randomPuzzle.src}`);
+        
         // Mulai loading gambar
         preloadImg.src = randomPuzzle.src;
+        
+        // Untuk iOS, coba force download terlebih dahulu
+        if (isIOS) {
+            console.log("Force download untuk iOS");
+            fetch(randomPuzzle.src)
+                .then(response => response.blob())
+                .then(blob => {
+                    const objectURL = URL.createObjectURL(blob);
+                    console.log("Berhasil membuat objectURL:", objectURL);
+                    preloadImg.src = objectURL;
+                })
+                .catch(error => {
+                    console.error("Fetch gagal:", error);
+                    // Tetap gunakan src original jika fetch gagal
+                });
+        }
     }
     
     // Event listener untuk tombol "Acak Ulang"
